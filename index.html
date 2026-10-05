@@ -17,8 +17,8 @@
     --key-fn:#a9a8a2;
     --key-op:#8f8e87;
     --key-eq:#55534c;
-    --screen:#26251f;
-    --screen-text:#e9e6da;
+    --screen:#e1ded5;
+    --screen-text:#37342d;
   }
 
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -84,36 +84,38 @@
     text-shadow:0 1px 0 rgba(255,255,255,.5);
   }
 
-  /* ———— 显示屏 ———— */
+  /* ———— 显示屏（嵌入面板的浅色石板） ———— */
   .screen{
     background-color:var(--screen);
-    background-image:var(--noise-fine);
-    background-blend-mode:overlay;
+    background-image:var(--noise-fine),linear-gradient(178deg,#e7e4db 0%,var(--screen) 55%,#d6d3ca 100%);
+    background-blend-mode:overlay,normal;
     border-radius:8px;
     padding:12px 14px 10px;
     box-shadow:
-      0 2px 5px rgba(0,0,0,.35) inset,
-      0 0 0 1px rgba(0,0,0,.25),
-      0 1px 0 rgba(255,255,255,.35);
+      0 2px 5px rgba(0,0,0,.16) inset,
+      0 -1px 3px rgba(255,255,255,.5) inset,
+      0 0 0 1px rgba(0,0,0,.15),
+      0 1px 0 rgba(255,255,255,.4);
     text-align:right;
   }
   .history{
     min-height:16px;
     font-size:12px;letter-spacing:.06em;
-    color:#8f8b7c;
+    color:#95917f;
     font-variant-numeric:tabular-nums;
     overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    text-shadow:0 1px 0 rgba(255,255,255,.5);
   }
   .display{
     font-size:clamp(30px,8.5vw,40px);
-    font-weight:300;line-height:1.25;
+    font-weight:400;line-height:1.25;
     color:var(--screen-text);
     font-variant-numeric:tabular-nums;
     letter-spacing:.02em;
-    text-shadow:0 0 8px rgba(233,230,218,.25);
+    text-shadow:0 1px 0 rgba(255,255,255,.55), 0 -1px 1px rgba(0,0,0,.12);
     overflow:hidden;white-space:nowrap;
   }
-  .display.error{color:#c9907c;font-size:clamp(18px,5vw,22px);letter-spacing:.1em;}
+  .display.error{color:#a2553d;font-size:clamp(18px,5vw,22px);letter-spacing:.1em;}
 
   /* ———— 按键 ———— */
   .keys{
