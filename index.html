@@ -112,7 +112,6 @@
     letter-spacing:.02em;
     text-shadow:0 0 8px rgba(233,230,218,.25);
     overflow:hidden;white-space:nowrap;
-    transition:font-size .12s ease;
   }
   .display.error{color:#c9907c;font-size:clamp(18px,5vw,22px);letter-spacing:.1em;}
 
@@ -343,14 +342,12 @@ function render(){
   if(calc.error){
     displayEl.textContent = calc.cur;
     displayEl.classList.add('error');
+    displayEl.style.fontSize = '';
     historyEl.innerHTML = '&nbsp;';
   }else{
     displayEl.classList.remove('error');
     displayEl.textContent = group(calc.cur);
-    // 长数字缩小字号
-    const len = displayEl.textContent.length;
-    const sizes = len <= 8 ? '' : len <= 11 ? '0.72em' : len <= 14 ? '0.55em' : '0.45em';
-    displayEl.style.fontSize = sizes || '';
+    fitDisplay();
     // 历史行 + AC/C 切换 + 运算符高亮
     historyEl.textContent = (calc.op !== null && calc.acc !== null)
       ? group(fmt(calc.acc)) + ' ' + OP_SYMBOL[calc.op] : '\u00A0';
@@ -358,6 +355,18 @@ function render(){
       b.classList.toggle('active', b.dataset.op === calc.op && calc.fresh));
   }
   acBtn.textContent = (!calc.fresh && calc.cur !== '0') ? 'C' : 'AC';
+}
+
+// 数字尽量大：先回到基准字号，只有溢出时才逐步缩小，保底 18px
+function fitDisplay(){
+  displayEl.style.fontSize = '';
+  let size = parseFloat(getComputedStyle(displayEl).fontSize);
+  displayEl.style.fontSize = size + 'px';
+  let guard = 24;
+  while (displayEl.scrollWidth > displayEl.clientWidth && size > 18 && guard--){
+    size = Math.max(18, size - 2);
+    displayEl.style.fontSize = size + 'px';
+  }
 }
 
 document.getElementById('keys').addEventListener('click', e => {
