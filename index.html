@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>清水混凝土计算器</title>
+<style>
+  :root{
+    --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    --noise-fine:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+    --ink:#3a3833;
+    --ink-soft:#5c5a53;
+    --bg:#a4a39e;
+    --panel:#c9c8c3;
+    --key:#b7b6b1;
+    --key-hi:#c2c1bc;
+    --key-fn:#a9a8a2;
+    --key-op:#8f8e87;
+    --key-eq:#55534c;
+    --screen:#26251f;
+    --screen-text:#e9e6da;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:"Helvetica Neue",Helvetica,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+    background-color:var(--bg);
+    background-image:var(--noise),linear-gradient(160deg,#adaca7 0%,#a19f9a 45%,#97958f 100%);
+    background-blend-mode:overlay,normal;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+    user-select:none;
+    color:var(--ink);
+  }
+
+  /* ———— 混凝土板 ———— */
+  .calc{
+    position:relative;
+    width:min(410px,100%);
+    background-color:var(--panel);
+    background-image:var(--noise-fine),linear-gradient(155deg,#cfcec9 0%,#c6c5c0 55%,#bfbec0 100%);
+    background-blend-mode:overlay,normal;
+    border-radius:14px;
+    padding:clamp(18px,4.5vw,26px) clamp(16px,4.2vw,24px) clamp(20px,5vw,28px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.5) inset,
+      0 -2px 6px rgba(0,0,0,.08) inset,
+      0 18px 40px -12px rgba(30,29,26,.45),
+      0 4px 10px rgba(30,29,26,.25);
+    display:flex;flex-direction:column;gap:16px;
+  }
+
+  /* 分格缝 */
+  .calc::before{
+    content:"";position:absolute;left:0;right:0;top:48px;height:2px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(0,0,0,.16),rgba(0,0,0,.05));
+    box-shadow:0 1px 0 rgba(255,255,255,.35);
+  }
+
+  /* 对拉螺栓孔 */
+  .bolts{position:absolute;inset:0;pointer-events:none;}
+  .bolts i{
+    position:absolute;width:11px;height:11px;border-radius:50%;
+    background:radial-gradient(circle at 46% 40%,#6f6d66 0 2.5px,#8b8982 45%,#b5b3ac 72%,rgba(181,179,172,0) 74%);
+    box-shadow:0 1px 1px rgba(255,255,255,.4);
+  }
+  .bolts i:nth-child(1){top:12px;left:14px;}
+  .bolts i:nth-child(2){top:12px;right:14px;}
+  .bolts i:nth-child(3){bottom:12px;left:14px;}
+  .bolts i:nth-child(4){bottom:12px;right:14px;}
+
+  /* 铭牌刻字 */
+  .brand{
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    padding:2px 4px 0;
+  }
+  .brand .en{
+    font-size:11px;font-weight:700;letter-spacing:.32em;color:#6d6b63;
+    text-shadow:0 1px 0 rgba(255,255,255,.55);
+  }
+  .brand .zh{
+    font-size:10px;letter-spacing:.42em;color:#7a786f;
+    text-shadow:0 1px 0 rgba(255,255,255,.5);
+  }
+
+  /* ———— 显示屏 ———— */
+  .screen{
+    background-color:var(--screen);
+    background-image:var(--noise-fine);
+    background-blend-mode:overlay;
+    border-radius:8px;
+    padding:12px 14px 10px;
+    box-shadow:
+      0 2px 5px rgba(0,0,0,.35) inset,
+      0 0 0 1px rgba(0,0,0,.25),
+      0 1px 0 rgba(255,255,255,.35);
+    text-align:right;
+  }
+  .history{
+    min-height:16px;
+    font-size:12px;letter-spacing:.06em;
+    color:#8f8b7c;
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  }
+  .display{
+    font-size:clamp(30px,8.5vw,40px);
+    font-weight:300;line-height:1.25;
+    color:var(--screen-text);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:.02em;
+    text-shadow:0 0 8px rgba(233,230,218,.25);
+    overflow:hidden;white-space:nowrap;
+    transition:font-size .12s ease;
+  }
+  .display.error{color:#c9907c;font-size:clamp(18px,5vw,22px);letter-spacing:.1em;}
+
+  /* ———— 按键 ———— */
+  .keys{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:clamp(8px,2.4vw,11px);
+  }
+  .keys button{
+    appearance:none;border:0;cursor:pointer;
+    height:clamp(58px,16vw,68px);
+    border-radius:6px;
+    font-family:inherit;
+    font-size:clamp(19px,5.4vw,22px);
+    font-weight:500;
+    color:var(--ink);
+    background-color:var(--key);
+    background-image:var(--noise-fine),linear-gradient(178deg,#bdbcb7 0%,var(--key) 60%,#adaca6 100%);
+    background-blend-mode:overlay,normal;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.45) inset,
+      0 -2px 4px rgba(0,0,0,.1) inset,
+      0 3px 0 #8e8d86,
+      0 6px 10px -4px rgba(30,29,26,.5);
+    text-shadow:0 1px 0 rgba(255,255,255,.35);
+    transition:transform .05s ease,box-shadow .05s ease,filter .1s ease;
+    touch-action:manipulation;
+  }
+  /* 浇筑批次色差 */
+  .keys button:nth-child(4n+2){filter:brightness(1.025);}
+  .keys button:nth-child(4n+3){filter:brightness(.975);}
+  .keys button:nth-child(8n+5){filter:brightness(1.015);}
+
+  .keys button:active,
+  .keys button.pressed{
+    transform:translateY(3px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.35) inset,
+      0 -1px 3px rgba(0,0,0,.14) inset,
+      0 0 0 #8e8d86,
+      0 2px 4px -2px rgba(30,29,26,.5);
+    filter:brightness(.96);
+  }
+
+  .keys button.fn{background-color:var(--key-fn);background-image:var(--noise-fine),linear-gradient(178deg,#b1b0aa 0%,var(--key-fn) 60%,#9d9c95 100%);font-size:clamp(16px,4.6vw,19px);}
+  .keys button.op{background-color:var(--key-op);background-image:var(--noise-fine),linear-gradient(178deg,#999790 0%,var(--key-op) 60%,#85837b 100%);color:#f0eee4;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+  .keys button.op.active{filter:brightness(1.18);box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 0 0 2px rgba(240,238,228,.35) inset,0 3px 0 #6f6d66,0 6px 10px -4px rgba(30,29,26,.5);}
+  .keys button.eq{
+    background-color:var(--key-eq);
+    background-image:var(--noise-fine),linear-gradient(178deg,#615f57 0%,var(--key-eq) 60%,#4a4841 100%);
+    color:#edeadd;text-shadow:0 1px 2px rgba(0,0,0,.4);
+    box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 -2px 4px rgba(0,0,0,.25) inset,0 3px 0 #38362f,0 6px 10px -4px rgba(30,29,26,.55);
+  }
+  .keys button.zero{grid-column:span 2;}
+
+  .footnote{
+    text-align:center;
+    font-size:9px;letter-spacing:.5em;text-indent:.5em;color:#8a887f;
+    text-shadow:0 1px 0 rgba(255,255,255,.5);
+  }
+
+  /* ———— 手机：满屏面板 ———— */
+  @media (max-width:520px){
+    body{padding:0;background:var(--bg);}
+    .calc{
+      width:100%;min-height:100dvh;border-radius:0;
+      padding:calc(env(safe-area-inset-top) + 18px) 14px calc(env(safe-area-inset-bottom) + 16px);
+      box-shadow:none;
+    }
+    .keys{flex:1;}
+    .keys button{height:auto;min-height:58px;}
+    .calc::before{top:40px;}
+  }
+  @media (max-height:760px) and (min-width:521px){
+    .keys button{height:52px;}
+    .display{font-size:32px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="calc" role="application" aria-label="清水混凝土计算器">
+  <div class="bolts"><i></i><i></i><i></i><i></i></div>
+
+  <div class="brand">
+    <span class="en">BÉTON&nbsp;BRUT&nbsp;/&nbsp;CALC.</span>
+    <span class="zh">清水混凝土</span>
+  </div>
+
+  <div class="screen">
+    <div class="history" id="history">&nbsp;</div>
+    <div class="display" id="display">0</div>
+  </div>
+
+  <div class="keys" id="keys">
+    <button class="fn" data-act="ac" id="acBtn">AC</button>
+    <button class="fn" data-act="back">⌫</button>
+    <button class="fn" data-act="percent">%</button>
+    <button class="op" data-op="/"  aria-label="除以">÷</button>
+
+    <button data-digit="7">7</button><button data-digit="8">8</button><button data-digit="9">9</button>
+    <button class="op" data-op="*" aria-label="乘以">×</button>
+
+    <button data-digit="4">4</button><button data-digit="5">5</button><button data-digit="6">6</button>
+    <button class="op" data-op="-" aria-label="减">−</button>
+
+    <button data-digit="1">1</button><button data-digit="2">2</button><button data-digit="3">3</button>
+    <button class="op" data-op="+" aria-label="加">+</button>
+
+    <button class="zero" data-digit="0">0</button>
+    <button data-act="dot">.</button>
+    <button class="eq" data-act="eq">=</button>
+  </div>
+
+  <div class="footnote">FAIR-FACED&nbsp;CONCRETE</div>
+</div>
+
+<!-- ================= 核心计算逻辑（独立，便于测试） ================= -->
+<script id="calc-core">
+class Calculator {
+  constructor(){ this.clear(); }
+  clear(){
+    this.acc = null;        // 累加值
+    this.op = null;         // 待执行运算符
+    this.cur = '0';         // 当前输入（字符串）
+    this.fresh = true;      // 下一数字是否重新开始输入
+    this.lastOp = null;     // 供 = 重复
+    this.lastOperand = null;
+    this.error = false;
+  }
+  inputDigit(d){
+    if(this.error) this.clear();
+    if(this.fresh){ this.cur = d; this.fresh = false; }
+    else{
+      if(this.cur.replace(/[-.]/g,'').length >= 12) return;   // 位数上限
+      if(this.cur === '0') this.cur = d;
+      else this.cur += d;
+    }
+  }
+  inputDot(){
+    if(this.error) this.clear();
+    if(this.fresh){ this.cur = '0.'; this.fresh = false; return; }
+    if(!this.cur.includes('.')) this.cur += '.';
+  }
+  setOp(op){
+    if(this.error) return;
+    if(this.op !== null && !this.fresh){
+      const r = this.compute(this.acc, this.op, parseFloat(this.cur));
+      if(!this.applyResult(r)) return;
+      this.cur = fmt(r);
+    }else if(this.op === null){
+      this.acc = parseFloat(this.cur);
+    }
+    this.op = op;
+    this.fresh = true;
+  }
+  equals(){
+    if(this.error) return;
+    if(this.op !== null && !this.fresh){
+      const right = parseFloat(this.cur);
+      const r = this.compute(this.acc, this.op, right);
+      this.lastOp = this.op; this.lastOperand = right;
+      if(!this.applyResult(r)) return;
+      this.op = null;
+    }else if(this.lastOp !== null && this.op === null){
+      const r = this.compute(parseFloat(this.cur), this.lastOp, this.lastOperand);
+      if(!this.applyResult(r)) return;
+    }
+    this.fresh = true;
+  }
+  percent(){
+    if(this.error) return;
+    const v = parseFloat(this.cur) / 100;
+    this.cur = fmt(v); this.fresh = false;
+  }
+  backspace(){
+    if(this.error){ this.clear(); return; }
+    if(this.fresh){ this.cur = '0'; return; }
+    this.cur = this.cur.length > 1 ? this.cur.slice(0,-1) : '0';
+    if(this.cur === '-' ) this.cur = '0';
+  }
+  compute(a, op, b){
+    switch(op){
+      case '+': return a + b;
+      case '-': return a - b;
+      case '*': return a * b;
+      case '/': return b === 0 ? NaN : a / b;
+    }
+    return b;
+  }
+  applyResult(r){
+    if(!isFinite(r)){ this.error = true; this.cur = '不能除以零'; return false; }
+    this.acc = r; this.cur = fmt(r); return true;
+  }
+}
+
+function fmt(n){
+  if(Object.is(n,-0)) n = 0;
+  if(!isFinite(n)) return '错误';
+  if(Math.abs(n) >= 1e12 || (Math.abs(n) > 0 && Math.abs(n) < 1e-9)){
+    return n.toExponential(6).replace(/\.?0+e/,'e');
+  }
+  return String(parseFloat(n.toPrecision(12)));
+}
+
+function group(s){
+  if(/[eE]/.test(s) || s === '' ) return s;
+  let neg = s.startsWith('-'); if(neg) s = s.slice(1);
+  const [i,d] = s.split('.');
+  return (neg?'-':'') + i.replace(/\B(?=(\d{3})+(?!\d))/g,',') + (d!==undefined ? '.'+d : '');
+}
+
+if (typeof module !== 'undefined' && module.exports){
+  module.exports = { Calculator, fmt, group };
+}
+</script>
+
+<!-- ================= DOM 绑定 ================= -->
+<script>
+const calc = new Calculator();
+const displayEl = document.getElementById('display');
+const historyEl = document.getElementById('history');
+const acBtn = document.getElementById('acBtn');
+const OP_SYMBOL = {'+':'+','-':'−','*':'×','/':'÷'};
+
+function render(){
+  if(calc.error){
+    displayEl.textContent = calc.cur;
+    displayEl.classList.add('error');
+    historyEl.innerHTML = '&nbsp;';
+  }else{
+    displayEl.classList.remove('error');
+    displayEl.textContent = group(calc.cur);
+    // 长数字缩小字号
+    const len = displayEl.textContent.length;
+    const sizes = len <= 8 ? '' : len <= 11 ? '0.72em' : len <= 14 ? '0.55em' : '0.45em';
+    displayEl.style.fontSize = sizes || '';
+    // 历史行 + AC/C 切换 + 运算符高亮
+    historyEl.textContent = (calc.op !== null && calc.acc !== null)
+      ? group(fmt(calc.acc)) + ' ' + OP_SYMBOL[calc.op] : '\u00A0';
+    document.querySelectorAll('.keys button.op').forEach(b =>
+      b.classList.toggle('active', b.dataset.op === calc.op && calc.fresh));
+  }
+  acBtn.textContent = (!calc.fresh && calc.cur !== '0') ? 'C' : 'AC';
+}
+
+document.getElementById('keys').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  if(btn.dataset.digit !== undefined) calc.inputDigit(btn.dataset.digit);
+  else if(btn.dataset.op) calc.setOp(btn.dataset.op);
+  else switch(btn.dataset.act){
+    case 'ac': calc.clear(); break;
+    case 'back': calc.backspace(); break;
+    case 'percent': calc.percent(); break;
+    case 'dot': calc.inputDot(); break;
+    case 'eq': calc.equals(); break;
+  }
+  render();
+});
+
+// 键盘支持
+window.addEventListener('keydown', e => {
+  const k = e.key;
+  let matched = true;
+  if(/^[0-9]$/.test(k)) calc.inputDigit(k);
+  else if(k === '.') calc.inputDot();
+  else if(['+','-','*','/'].includes(k)) calc.setOp(k);
+  else if(k === 'Enter' || k === '='){ calc.equals(); }
+  else if(k === 'Escape') calc.clear();
+  else if(k === 'Backspace') calc.backspace();
+  else if(k === '%') calc.percent();
+  else matched = false;
+  if(matched){ e.preventDefault(); render(); }
+});
+
+render();
+</script>
+</body>
+</html>
